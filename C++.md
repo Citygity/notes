@@ -47,6 +47,8 @@ c++中所有得字符串字面值都由编译器自动在末尾加一个空字�
 
 dynamic_cast:将一个基类对象指针（或引用）cast到继承类指针，dynamic_cast会根据基类指针是否真正指向继承类指针来做相应处理
 
+**reinterpret_cast用法：** reinterpret_cast<type-id> (expression) type-id 必须是一个指针、引用、算术类型、函数指针或者成员指针。 reinterpret_cast运算符是用来处理无关类型之间的转换；它会产生一个新的值，这个值会有与原始参数（expressoin）有完全相同的比特位。例如：int *n= new int ;   double *d=reinterpret_cast<double*> (n);   在进行计算以后，d 包含无用值。这是因为 reinterpret_cast 仅仅是复制 n 的比特位到 d，没有进行必要的分析。因此，需要谨慎使用 reinterpret_cast。
+
 对象初始化：直接初始化和复制初始化
 
 ```c++
@@ -382,6 +384,8 @@ sort_heap: 对指定范围内的序列重新排序，它假设该序列是个有
 
 **static**：第一、在修饰变量的时候，static修饰的静态局部变量只执行一次，而且延长了局部变量的生命周期，直到程序运行结束以后才释放。  第二、static修饰全局变量的时候，这个全局变量只能在本文件中访问，不能在其它文件中访问，即便是extern外部声明也不可以。  第三、static修饰一个函数，则这个函数的只能在本文件中调用，不能被其他文件调用。Static修饰的局部变量存放在全局数据区的静态变量区。初始化的时候自动初始化为0；  
 
+**C++类的静态成员（static members in classes **：通过**在成员的声明之前加上关键字static**使得其与类关联在一起。与其他成员一样，静态成员**可以是public或private的**。静态数据成员的类型**可以是常量、引用、指针、类类型**。 
+
  C++中的**explicit**关键字只能用于修饰只有一个参数的类构造函数, 它的作用是表明该构造函数是显示的, 而非隐式的, 跟它相对应的另一个关键字是implicit, 意思是隐藏的,类构造函数默认情况下即声明为implicit(隐式). 
 
 **virtual**:基类必须指出希望派生类重定义哪些函数，定义为virtual的函数是基类期待派生类重新定义的，基类希望派生类继承的函数不能定义为函数。
@@ -429,7 +433,6 @@ https://blog.csdn.net/sunshinewave/article/details/51020421
 ::作用域符操作符。
 ```
 
-This paper proposed a novel architecture combines DenseNet，Inception module and fully convolution network for high resolution remote-sensing image semantic segmentation. Additionally this model takes both spectral data and DSMs data as input to obtain a better result.
+## 关键字
 
-Deeplab V3+ is also a powerful model for semantic segmentation, it will be better if you may offer the result comparison of it.
-
+explicit ：explicit可以抑制内置类型隐式转换,所以在类的构造函数中,最好尽可能多用explicit关键字,防止不必要的隐式转换.
