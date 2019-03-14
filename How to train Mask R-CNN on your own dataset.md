@@ -150,7 +150,7 @@ class RoadSignDataset(utils.Dataset):
 		
 ```
 
-some other settings as below
+some other settings as below:
 
 ```python
 # Training dataset
