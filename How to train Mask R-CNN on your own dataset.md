@@ -31,3 +31,174 @@ def train_val_txt_split(images_dir,train_filenames,val_filenames,rate):
         val.write(val_filenames)
 ```
 
+## 1.Training script
+
+I finetuned my model on coco dataset,download the pretrained weight first.
+
+```python
+# Directory to save logs and trained model
+MODEL_DIR = os.path.join(ROOT_DIR, "logs")
+
+# Local path to trained weights file
+COCO_MODEL_PATH = os.path.join(MODEL_DIR, "mask_rcnn_coco.h5")
+# Download COCO trained weights from Releases if needed
+if not os.path.exists(COCO_MODEL_PATH):
+    utils.download_trained_weights(COCO_MODEL_PATH)
+```
+
+Adjust the config class to fit your data.IMAGES_PER_GPU was set to 1 because my train data's size is (1920,1020).
+
+```python
+class ShapesConfig(Config):
+    """Configuration for training on the toy shapes dataset.
+    Derives from the base Config class and overrides values specific
+    to the toy shapes dataset.
+    """
+    # Give the configuration a recognizable name
+    NAME = "shapes" 
+
+    # Train on 1 GPU and 1 images per GPU.  Batch size is 8 (GPUs * images/GPU).
+    GPU_COUNT = 7
+    IMAGES_PER_GPU = 1
+
+    # Number of classes (including background)
+    NUM_CLASSES = 1 + 3  # background + 3 shapes
+
+    # Use small images for faster training. Set the limits of the small side
+    # the large side, and that determines the image shape.
+    #!!!recommend to refer to config.py for more details
+    IMAGE_MIN_DIM = 512
+    IMAGE_MAX_DIM = 512
+
+    # Use smaller anchors because our image and objects are small
+    RPN_ANCHOR_SCALES = (8, 16, 32, 64, 128)  # anchor side in pixels
+
+    # Reduce training ROIs per image because the images are small and have
+    # few objects. Aim to allow ROI sampling to pick 33% positive ROIs.
+    TRAIN_ROIS_PER_IMAGE = 32
+
+    # Use a small epoch since the data is simple
+    # fit_generator was used to train the model, it determines the frequency of saving 		# model and validation
+    # steps_per_epoch: Integer. Total number of steps (batches of samples) to yield from 	 #	generator before declaring one epoch finished and starting the next epoch. It 		# should typically be equal to ceil(num_samples / batch_size) Optional for Sequence: 	 #if unspecified, will use the len(generator) as a number of steps.
+    STEPS_PER_EPOCH = 1000
+
+    # use small validation steps since the epoch is small
+    VALIDATION_STEPS = 5
+
+config=ShapesConfig()
+config.display()
+
+```
+
+​	
+
+```python
+class RoadSignDataset(utils.Dataset):
+    images_dirs = {'0927': ['0927/0927_1', '0927/0927_2', '0927/0927_3', '0927/0927_4', '0927/0927_5', '0927/0927_6',
+                            '0927/0927_7', '0927/0927_8'],\
+                   '1023': ['1023/1023_1', '1023/1023_2', '1023/1023_3', '1023/1023_11', '1023/1023_12'],\
+                   '1025': ['1025/1025_13', '1025/1025_14'],\
+                   '1101': ['1101/1101_17', '1101/1101_18', '1101/1101_19', '1101/1101_20', '1101/1101_21'],\
+                   '1107': ['1107/1107_22', '1107/1107_23', '1107/1107_24', '1107/1107_25', '1107/1107_26',
+                            '1107/1107_27', '1107/1107_28']}
+
+    def load_shapes(self, count, img_floder, mask_floder, imglist, image_root_path):
+        """Generate the requested number of synthetic images.
+        count: number of images to generate.
+        height, width: the size of the generated images.
+        """
+        # Add classes, change this part to adjust your dataset
+        self.add_class("road_sign", 1, "sign")
+        self.add_class("road_sign", 2, "sign_back")
+        self.add_class("road_sign", 3, "side_sign")
+        self.add_class("road_sign", 4, "side_sign_back")
+        self.add_class("road_sign", 5, "led")
+        # iterate your dataset ,add your path of train image and information of mask including the category and coordinate of polygons
+        for i,filename in enumerate(imglist):
+            image_file_path=os.path.join(img_floder,filename)
+            mask_file_path=os.path.join(mask_floder,filename[:-4]+'txt')
+            with open(mask_file_path) as f:
+                mask_infos = json.load(f)
+                #mask_infos = list(mask_infos);
+                #polygons = [content[u'points'] for content in mask_infos]
+                print("load_shape:{};imageid:{}".format(image_file_path, i))
+                self.add_image("road_sign", image_id=i, path=image_file_path,
+                               width=1920, height=1020, mask_path=mask_file_path, mask_infos=mask_infos)
+	# generate your mask by your mask_infos
+    def load_mask(self, image_id):
+        """Generate instance masks for shapes of the given image ID.
+        """
+        #change this line below to suit your dataset
+        categorys={'40':1,'51':2,'59':3,'60':4,'61':5}
+        info = self.image_info[image_id]
+        mask = np.zeros([info["height"], info["width"], len(info["mask_infos"])],
+                        dtype=np.uint8)
+        labels_form=[]
+        for i,child in enumerate(info["mask_infos"]):
+            label_category=child['category']
+            points=child['points']
+            x=np.array(points)[:,0]
+            y=np.array(points)[:,1]
+            rr,cc=skimage.draw.polygon(y,x)
+            mask[rr, cc, i] = 1
+            labels_form.append(categorys[label_category])
+        return mask.astype(np.bool), np.array(labels_form).astype(np.int32)
+
+
+
+  
+		
+```
+
+some other settings as below
+
+```python
+# Training dataset
+dataset_train = ShapesDataset()
+dataset_train.load_shapes(500, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+dataset_train.prepare()
+
+# Validation dataset
+dataset_val = ShapesDataset()
+dataset_val.load_shapes(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
+dataset_val.prepare()
+
+# Create model in training mode
+model = modellib.MaskRCNN(mode="training", config=config,
+                          model_dir=MODEL_DIR)
+
+# Which weights to start with?
+init_with = "coco"  # imagenet, coco, or last
+
+if init_with == "imagenet":
+    model.load_weights(model.get_imagenet_weights(), by_name=True)
+elif init_with == "coco":
+    # Load weights trained on MS COCO, but skip layers that
+    # are different due to the different number of classes
+    # See README for instructions to download the COCO weights
+    model.load_weights(COCO_MODEL_PATH, by_name=True,
+                       exclude=["mrcnn_class_logits", "mrcnn_bbox_fc",
+                                "mrcnn_bbox", "mrcnn_mask"])
+elif init_with == "last":
+    # Load the last model you trained and continue training
+    model.load_weights(model.find_last(), by_name=True)
+
+
+# Fine tune all layers
+# Passing layers="all" trains all layers. You can also
+# pass a regular expression to select which layers to
+# train by name pattern.
+# layers: Allows selecting wich layers to train. It can be:
+# - A regular expression to match layer names to train
+# - One of these predefined values:
+# heads: The RPN, classifier and mask heads of the network
+# all: All the layers
+# 3+: Train Resnet stage 3 and up
+# 4+: Train Resnet stage 4 and up
+# 5+: Train Resnet stage 5 and up
+model.train(dataset_train, dataset_val,
+            learning_rate=config.LEARNING_RATE / 10,
+            epochs=2,
+            layers="all")
+```
+
