@@ -202,3 +202,39 @@ model.train(dataset_train, dataset_val,
             layers="all")
 ```
 
+some tips about hyper parameters：
+
+## Mini Masks
+
+Instance binary masks can get large when training with high resolution images. For example, if training with 1024x1024 image then the mask of a single instance requires 1MB of memory (Numpy uses bytes for boolean values). If an image has 100 instances then that's 100MB for the masks alone.
+
+To improve training speed, we optimize masks by:
+
+- We store mask pixels that are inside the object bounding box, rather than a mask of the full image. Most objects are small compared to the image size, so we save space by not storing a lot of zeros around the object.
+- We resize the mask to a smaller size (e.g. 56x56). For objects that are larger than the selected size we lose a bit of accuracy. But most object annotations are not very accuracy to begin with, so this loss is negligable for most practical purposes. Thie size of the mini_mask can be set in the config class.
+
+
+
+## config.py
+
+used in ProposalLayer(),to determine numbers of ROIs of nms.
+
+```python
+    # ROIs kept after non-maximum suppression (training and inference)
+    POST_NMS_ROIS_TRAINING = 2000
+    POST_NMS_ROIS_INFERENCE = 1000
+```
+
+## Anchors
+
+The order of anchors is important. **Use the same order in training and prediction phases.** And it must match the order of the convolution execution.
+
+For an FPN network, the anchors must be ordered in a way that makes it easy to match anchors to the output of the convolution layers that predict anchor scores and shifts.
+
+- Sort by pyramid level first. All anchors of the first level, then all of the second and so on. This makes it easier to separate anchors by level.
+- Within each level, sort anchors by feature map processing sequence. Typically, a convolution layer processes a feature map starting from top-left and moving right row by row.
+- For each feature map cell, pick any sorting order for the anchors of different ratios. Here we match the order of ratios passed to the function.
+
+**Anchor Stride:** In the FPN architecture, feature maps at the first few layers are high resolution. For example, if the input image is 1024x1024 then the feature meap of the first layer is 256x256, which generates about 200K anchors (256*256*3). These anchors are 32x32 pixels and their stride relative to image pixels is 4 pixels, so there is a lot of overlap. We can reduce the load significantly if we generate anchors for every other cell in the feature map. A stride of 2 will cut the number of anchors by 4, for example.
+
+In this implementation we use an anchor stride of 2, which is different from the paper.
