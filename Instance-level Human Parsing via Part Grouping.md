@@ -8,7 +8,7 @@
 
 本文从一个新的角度重新构造实例级人体解析，即通过统一网络解决两个连贯的分割聚类任务，包括部分级像素分组和实例级部分分组。 首先，part-level pixel-grouping可以通过语义部分分割任务来解决，该任务将每个像素分配为一个部分标签，其学习分类属性。 其次，给定一组独立的语义部分，实例级部分分组可以根据预测的实例感知边缘确定所有部分的实例所有物，其中由实例边缘分隔的部分将被分组为不同的人物实例。 我们将这种无检测的统一网络称为联合优化语义部分分割和实例感知边缘检测，如图4所示的部分分组网络（PGN）。
 
-![1556874230772](C:\Users\rayshea\AppData\Local\Temp\1556874230772.png)
+![1556874230772](http://pqz0lv0o0.bkt.clouddn.com/1556874230772.png)
 
 ### PGN
 
@@ -36,6 +36,18 @@
 
   [40]：Holistically-Nested Edge Detection
   ![img](https://img-blog.csdn.net/20180710221402378?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2JleW9uZGp2NjEw/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70) 
+
+  （a）Multi-stream learning 示意图，可以看到图中的平行的网络下，每个网络通过不同参数与receptive field大小的不同，获得多尺度的结果。输入影像是同时进入多个网络处理，得到的特征结果直接反应多尺度。
+
+  （b）Skip-layer network learning 示意图，该方法主要连接各个单的初始网络流得到特征响应，并将响应结合在一起输出。
+
+  这里（a）和（b）都是使用一个输出的loss函数进行单一的回归预测，而边缘检测可能通过多个回归预测得到结合的边缘图效果更好。
+
+  （c）Single model on multiple inputs 示意图，单一网络，图像resize方法得到多尺度进行输入，该方法在训练和test过程均可加入。同时在非深度学习中也有广泛应用。
+
+  （d）Training independent networks ，从（a）演化来，通过多个独立网络分别对不同深度和输出loss进行多尺度预测，该方法下训练样本量较大。
+
+  （e）Holistically-nested networks，本文提出的算法结构，从（d）演化来，类似地是一个相互独立多网络多尺度预测系统，但是将multiple side outputs组合成一个单一深度网络。
 
   作者提出来的方法，对于一个输入，经过连续的卷积层，将每一层的结果保存下来进行ensemble得到第一个输出，同时将每一层的结果concatenate在一起再过一个卷积核得到第二个输出，最后将两个输出在ensemble在一起得到最后的结果。 
 
