@@ -34,7 +34,12 @@
 
   在[40]之后，我们将边缘检测的侧输出连接到ResNet-101的最后三个块。 在每个侧输出层施加深度监督以学习用于边缘预测的丰富的层次表示。 特别地，我们使用ASPP用于三个边缘侧输出层，以在多个尺度上稳健地检测边界。 我们使用的ASPP包括一个1x1卷积和四个3x3个atrous卷积，扩张率为2,4,8和16.在用于边缘检测的最终分类层中，我们使用金字塔池模块来收集更多的全局信息 更好的推理。 我们对所有边缘输出应用11个卷积层和一个通道来生成边缘得分图。
 
-  [40]：Holistically-Nested Edge Detection
+  ------
+
+  
+
+  #### [40]：Holistically-Nested Edge Detection
+
   ![img](https://img-blog.csdn.net/20180710221402378?watermark/2/text/aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2JleW9uZGp2NjEw/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70) 
 
   （a）Multi-stream learning 示意图，可以看到图中的平行的网络下，每个网络通过不同参数与receptive field大小的不同，获得多尺度的结果。输入影像是同时进入多个网络处理，得到的特征结果直接反应多尺度。
@@ -59,9 +64,15 @@
 
   这里W代表主干网络的参数，w则是将不同层的结果进行upsample对应的网络参数，b则是将不同层的结果concatenate在一起然后经过一个卷积得到最后的输出时候的卷积网络的参数。 
 
+  **网络结构图**
+
+  ![](http://pqz0lv0o0.bkt.clouddn.com/20161011104710752.png)
+
+  ------
+
   
 
-- Renement branch
+- Refinement branch
 
   我们设计了一个简单而有效的改进分支，用于联合进行分割和边缘预测。 如图4所示，通过将分割和边缘预测映射到具有额外的1x1卷积的更多数量的通道，将分割和边缘预测集成回特征空间。 重新映射的特征映射与来自分段分支和边缘分支的提取的特征映射组合，这些特征映射被最终馈送到另外两个金字塔池模块中以相互增强分段和边缘结果。
 
