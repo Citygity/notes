@@ -16,11 +16,15 @@
 
    在人像分割的任务中，非边界的区域需要一个很大的感知野来预测全局上下文信息，然后边界区域需要晓的感知野来集中注意力于局部细节。因此他们两个需要被分开对待。本文退出一个边界attention机制以及一个加权loss function来处理边界区域以及非边界区域。
 
-   本文pipeline如下图，首先彩色图像通过语义分支得到一个1/4原尺寸大小的high-level语义特征图。然后语义分支的输出被投影到一个one channel的特征图上，并且被上采用到原图大小作为boundary attention map，这个boundary attention map被监督通过boundary attention（BA） loss，此时，在边界特征挖掘分支，我们concatenate输入图片和boundary attention map以挖掘低层次的特征更加有指向性。最后，混合区域混合了高层次的语义特征以及低层次的细节以产生更好的分割结果。最终的分割结果通过两个loss来监督，segmentation loss被用来控制人像分割的整个流程，refine loss refine边界细节。
+   本文pipeline如图3，首先彩色图像通过语义分支得到一个1/4原尺寸大小的high-level语义特征图。然后语义分支的输出被投影到一个one channel的特征图上，并且被上采用到原图大小作为boundary attention map，这个boundary attention map被监督通过boundary attention（BA） loss，此时，在边界特征挖掘分支，我们concatenate输入图片和boundary attention map以挖掘低层次的特征更加有指向性。最后，混合区域混合了高层次的语义特征以及低层次的细节以产生更好的分割结果。最终的分割结果通过两个loss来监督，segmentation loss被用来控制人像分割的整个流程，refine loss refine边界细节。
+
+   ![](http://pqz0lv0o0.bkt.clouddn.com/fig3.png)
 
    **Semantic Branch：**本分支主要是为了获得一个可靠的特征表达，整个特征表达主要是通过高层次的特征语义信息来主导的。
 
    **Boundary feature mining branch**：semantic branch 的输出被投影为1channel通过1*1卷积，此时它被双线性插值，到完整尺寸作为boundary attention map，BA loss用来知道attention map定位boundary 区域，，boundary区域的target 可以被生成不需要手工标注。如fig4，首先我们使用canny边界检测器来在人像标注上提取semantic edge。考虑到人像区域在不同的图片上变化很大，所以把不同的图片上扩大到相同的宽度是不合理的。所以我们把不同图片的边缘用不同的kernelsize扩大。如下图
+
+   ![](http://pqz0lv0o0.bkt.clouddn.com/Kvalue.png)
 
    W是一个经验值，表示标准宽度，本文设为50.BA loss是一个binary cross-entropy loss，但是我们不想要boundary attention map二值化，因为空间上的不平滑可能会导致数值不稳定，因此我们使用一个sigmoid函数来soft输出。图中的T是一个调节用的值以产生更soft的概率分布。最后，输入图片和attention map被cat在一起，作为一个4 channel 的图片，整个4channel的图片通过一个卷积层以提取更细节的信息。和别的多分支各自独自处理结果的网络不同，本文的低层次的特征是由高层次的特征来指导的。
 
